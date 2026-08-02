@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Jellyfin Administrator Enhancements</title>
+</head>
+<body>
+    <div id="AdministratorEnhancementsPage" data-role="page" class="page type-interior">
+        <div>
+            <div class="content-primary">
+                <form class="pluginConfigurationForm">
+                    <div class="verticalSection">
+                        <div class="sectionTitleContainer flex align-items-center">
+                            <h1 class="sectionTitle">Jellyfin Administrator Enhancements</h1>
+                        </div>
+
+                        <fieldset class="verticalSection verticalSection-extrabottompadding">
+                            <legend><h3>Seerr</h3></legend>
+
+                            <div class="inputContainer">
+                                <input is="emby-input" type="url" id="SeerrUrl" label="Seerr URL" autocomplete="off" required="required">
+                                <div class="fieldDescription">The Seerr address reachable from the Jellyfin container. Docker installations normally use http://seerr:5055.</div>
+                            </div>
+
+                            <div class="inputContainer">
+                                <input is="emby-input" type="password" id="SeerrApiKey" label="Seerr API key" autocomplete="new-password">
+                                <div class="fieldDescription">The saved key is shown as a password and is only used by Jellyfin to contact Seerr.</div>
+                            </div>
+
+                            <button is="emby-button" type="button" class="raised button-cancel" id="TestConnection">
+                                <span>Test connection</span>
+                            </button>
+                            <div id="ConnectionStatus" class="fieldDescription" role="status" aria-live="polite"></div>
+                        </fieldset>
+
+                        <fieldset class="verticalSection verticalSection-extrabottompadding">
+                            <legend><h3>Deletion cleanup</h3></legend>
+
+                            <div class="checkboxContainer checkboxContainer-withDescription">
+                                <label>
+                                    <input type="checkbox" is="emby-checkbox" id="DeleteSynchronizationEnabled">
+                                    <span>Clean up Seerr after deleting media in Jellyfin</span>
+                                </label>
+                                <div class="fieldDescription checkboxFieldDescription">
+                                    When enabled, deleting a movie or series also removes its matching Radarr/Sonarr entry and Seerr request.
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <button is="emby-button" type="submit" class="raised button-submit block">
+                        <span>Save</span>
+                    </button>
+                    <div id="SaveStatus" class="fieldDescription" role="status" aria-live="polite"></div>
+                </form>
+            </div>
+        </div>
+        <script>
+        (function () {
+            const pluginId = 'b4b0f4e9-d7ea-4c70-a4d6-4da8a3d5c0ce';
+            const page = document.querySelector('#AdministratorEnhancementsPage');
+            const form = page.querySelector('form');
+            const url = page.querySelector('#SeerrUrl');
+            const apiKey = page.querySelector('#SeerrApiKey');
+            const enabled = page.querySelector('#DeleteSynchronizationEnabled');
+            const testButton = page.querySelector('#TestConnection');
+            const connectionStatus = page.querySelector('#ConnectionStatus');
+            const saveStatus = page.querySelector('#SaveStatus');
+
+            function setStatus(element, message, error) {
+                element.textContent = message;
+                element.classList.toggle('ae-status-error', Boolean(error));
+            }
+
+            function load() {
+                window.ApiClient.getPluginConfiguration(pluginId).then(function (configuration) {
+                    enabled.checked = Boolean(configuration.DeleteSynchronizationEnabled);
+                    url.value = configuration.SeerrUrl || 'http://seerr:5055';
+                    apiKey.value = configuration.SeerrApiKey || '';
+                    apiKey.placeholder = configuration.SeerrApiKey ? 'Saved API key' : '';
+                    setStatus(connectionStatus, '', false);
+                    setStatus(saveStatus, '', false);
+                }).catch(function (error) {
+                    setStatus(saveStatus, 'Unable to load settings: ' + (error.message || error), true);
+                });
+            }
+
+            function testConnection() {
+                testButton.disabled = true;
+                setStatus(connectionStatus, 'Testing connection…', false);
+                window.ApiClient.ajax({
+                    type: 'POST',
+                    url: window.ApiClient.getUrl('AdministratorEnhancements/TestConnection'),
+                    dataType: 'json',
+                    data: JSON.stringify({
+                        SeerrUrl: url.value.trim(),
+                        SeerrApiKey: apiKey.value
+                    }),
+                    contentType: 'application/json'
+                }).then(function (result) {
+                    setStatus(connectionStatus, result.Message || 'Connection successful.', false);
+                }).catch(function (error) {
+                    setStatus(connectionStatus, 'Connection failed. Check the URL and API key.', true);
+                }).finally(function () {
+                    testButton.disabled = false;
+                });
+            }
+
+            function save(event) {
+                event.preventDefault();
+                const cleanupEnabled = enabled.checked;
+                const configuration = {
+                    DeleteSynchronizationEnabled: cleanupEnabled,
+                    DryRun: !cleanupEnabled,
+                    SeerrUrl: url.value.trim(),
+                    SeerrApiKey: apiKey.value,
+                    RemoveFromDownloadManager: true,
+                    DeleteSeerrRequests: true,
+                    RequestTimeoutSeconds: 15
+                };
+
+                setStatus(saveStatus, 'Saving…', false);
+                window.ApiClient.updatePluginConfiguration(pluginId, configuration).then(function () {
+                    apiKey.placeholder = apiKey.value ? 'Saved API key' : '';
+                    setStatus(saveStatus, 'Saved.', false);
+                }).catch(function (error) {
+                    setStatus(saveStatus, 'Unable to save settings: ' + (error.message || error), true);
+                });
+            }
+
+            testButton.addEventListener('click', testConnection);
+            form.addEventListener('submit', save);
+            page.addEventListener('pageshow', load);
+            load();
+        }());
+        </script>
+    </div>
+</body>
+</html>

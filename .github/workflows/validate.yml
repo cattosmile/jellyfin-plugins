@@ -1,0 +1,26 @@
+name: Validate plugins
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build Disk Space Indicator
+        run: dotnet build Jellyfin.Plugin.DiskSpaceIndicator/Jellyfin.Plugin.DiskSpaceIndicator.csproj --configuration Release
+
+      - name: Build Administrator Enhancements
+        run: dotnet build Jellyfin.Plugin.AdministratorEnhancements/Jellyfin.Plugin.AdministratorEnhancements.csproj --configuration Release
+
+      - name: Validate repository manifest
+        run: node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')); console.log('manifest.json is valid JSON')"

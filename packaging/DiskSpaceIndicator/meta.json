@@ -1,0 +1,12 @@
+{
+    "category": "General",
+    "changelog": "Initial public release for Jellyfin 10.11.",
+    "description": "Shows total, used and free space for the filesystem volume visible to Jellyfin and adds a library scan shortcut to the server drawer.",
+    "guid": "2d0a8f3e-41bd-4c6a-a908-9ed0e5c2f4b0",
+    "name": "Disk Space Indicator",
+    "overview": "See server disk usage from Jellyfin.",
+    "owner": "cattosmile",
+    "targetAbi": "10.11.0.0",
+    "timestamp": "2026-08-03T00:00:00Z",
+    "version": "0.1.0.0"
+}

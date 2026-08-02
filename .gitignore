@@ -1,0 +1,7 @@
+bin/
+obj/
+artifacts/
+.distribution/
+.vscode/
+*.user
+*.suo

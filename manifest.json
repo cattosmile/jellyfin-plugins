@@ -1,0 +1,38 @@
+[
+    {
+        "guid": "2d0a8f3e-41bd-4c6a-a908-9ed0e5c2f4b0",
+        "name": "Disk Space Indicator",
+        "description": "Shows total, used and free space for the filesystem volume visible to Jellyfin and adds a library scan shortcut to the server drawer.",
+        "overview": "See server disk usage from Jellyfin.",
+        "owner": "cattosmile",
+        "category": "General",
+        "versions": [
+            {
+                "version": "0.1.0.0",
+                "changelog": "Initial public release for Jellyfin 10.11.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/DiskSpaceIndicator_0.1.0.0.zip",
+                "checksum": "2075fb3911460c89de7fa835998ce2a7",
+                "timestamp": "2026-08-03T01:40:00Z"
+            }
+        ]
+    },
+    {
+        "guid": "b4b0f4e9-d7ea-4c70-a4d6-4da8a3d5c0ce",
+        "name": "Jellyfin Administrator Enhancements",
+        "description": "Synchronizes Jellyfin movie and series deletions with matching Seerr requests and Radarr/Sonarr media files.",
+        "overview": "Reduce manual cleanup after deleting media from Jellyfin.",
+        "owner": "cattosmile",
+        "category": "General",
+        "versions": [
+            {
+                "version": "0.1.0.0",
+                "changelog": "Initial public release with disabled-by-default Seerr deletion synchronization.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/JellyfinAdministratorEnhancements_0.1.0.0.zip",
+                "checksum": "e39d5fce2d1bd3dbaf8177b41319b12a",
+                "timestamp": "2026-08-03T01:40:00Z"
+            }
+        ]
+    }
+]

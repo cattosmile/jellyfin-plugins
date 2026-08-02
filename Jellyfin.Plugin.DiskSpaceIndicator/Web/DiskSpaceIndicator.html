@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Disk Space Indicator</title>
+    <style>
+        #DiskSpaceIndicatorPage .dsi-progress {
+            margin: 1em 0 .65em;
+        }
+
+        #DiskSpaceIndicatorPage .dsi-error {
+            color: #ffb4ab;
+        }
+    </style>
+</head>
+<body>
+    <div id="DiskSpaceIndicatorPage" data-role="page" class="page type-interior">
+        <div>
+            <div class="content-primary">
+                <form class="pluginConfigurationForm">
+                    <div class="verticalSection">
+                        <div class="sectionTitleContainer flex align-items-center">
+                            <h1 class="sectionTitle">Disk Space Indicator</h1>
+                        </div>
+
+                        <div class="inputContainer">
+                            <div id="dsiLabel" class="fieldDescription" aria-live="polite">Loading…</div>
+                            <div class="itemProgressBar dsi-progress" aria-hidden="true">
+                                <div id="dsiFill" class="itemProgressBarForeground" style="width: 0"></div>
+                            </div>
+                            <div id="dsiPath" class="fieldDescription"></div>
+                            <div class="fieldDescription">
+                                This is the filesystem volume visible to the Jellyfin container, not only the media library.
+                            </div>
+                        </div>
+                    </div>
+
+                    <button is="emby-button" type="submit" class="raised button-submit block">
+                        <span>Refresh</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <script>
+        (function () {
+            const page = document.querySelector('#DiskSpaceIndicatorPage');
+            const form = page.querySelector('form');
+            const label = page.querySelector('#dsiLabel');
+            const fill = page.querySelector('#dsiFill');
+            const path = page.querySelector('#dsiPath');
+
+            function formatBytes(bytes) {
+                const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+                let value = Number(bytes);
+                let unit = 0;
+                while (value >= 1024 && unit < units.length - 1) {
+                    value /= 1024;
+                    unit += 1;
+                }
+                const digits = unit === 0 ? 0 : value < 10 ? 1 : 0;
+                return value.toFixed(digits) + ' ' + units[unit];
+            }
+
+            function load() {
+                const apiClient = window.ApiClient;
+                if (!apiClient || !apiClient.accessToken()) {
+                    label.textContent = 'Waiting for Jellyfin authentication…';
+                    window.setTimeout(load, 250);
+                    return;
+                }
+
+                label.classList.remove('dsi-error');
+                apiClient.getJSON(apiClient.getUrl('DiskSpace/Info'), true).then(function (info) {
+                    const percentage = Math.max(0, Math.min(100, Number(info.UsedPercentage)));
+                    label.textContent = formatBytes(info.UsedBytes) + ' of ' + formatBytes(info.TotalBytes) + ' used (' + percentage.toFixed(1) + '%)';
+                    fill.style.width = percentage + '%';
+                    path.textContent = 'Volume: ' + info.Path;
+                }).catch(function (error) {
+                    label.textContent = 'Unable to read disk space: ' + (error.message || error);
+                    label.classList.add('dsi-error');
+                });
+            }
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                load();
+            });
+            page.addEventListener('pageshow', load);
+            load();
+        }());
+        </script>
+    </div>
+</body>
+</html>
