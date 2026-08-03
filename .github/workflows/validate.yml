@@ -19,8 +19,8 @@ jobs:
       - name: Build Disk Space Indicator
         run: dotnet build Jellyfin.Plugin.DiskSpaceIndicator/Jellyfin.Plugin.DiskSpaceIndicator.csproj --configuration Release
 
-      - name: Build Administrator Enhancements
-        run: dotnet build Jellyfin.Plugin.AdministratorEnhancements/Jellyfin.Plugin.AdministratorEnhancements.csproj --configuration Release
+      - name: Build Admin Enhancements
+        run: dotnet build Jellyfin.Plugin.AdminEnhancements/Jellyfin.Plugin.AdminEnhancements.csproj --configuration Release
 
       - name: Validate repository manifest
         run: node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')); console.log('manifest.json is valid JSON')"

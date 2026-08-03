@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Jellyfin.Plugin.AdministratorEnhancements.Configuration;
+using Jellyfin.Plugin.AdminEnhancements.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
@@ -10,7 +10,7 @@ using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.AdministratorEnhancements.Services;
+namespace Jellyfin.Plugin.AdminEnhancements.Services;
 
 /// <summary>
 /// Observes Jellyfin item removals and synchronizes matching Seerr records.

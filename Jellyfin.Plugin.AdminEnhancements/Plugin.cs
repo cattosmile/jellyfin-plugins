@@ -1,11 +1,11 @@
 using System.Globalization;
-using Jellyfin.Plugin.AdministratorEnhancements.Configuration;
+using Jellyfin.Plugin.AdminEnhancements.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
-namespace Jellyfin.Plugin.AdministratorEnhancements;
+namespace Jellyfin.Plugin.AdminEnhancements;
 
 /// <summary>
 /// Server-side administrator quality-of-life enhancements for Jellyfin.
@@ -34,7 +34,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public static Plugin? Instance { get; private set; }
 
     /// <inheritdoc />
-    public override string Name => "Jellyfin Administrator Enhancements";
+    public override string Name => "Admin Enhancements";
 
     /// <inheritdoc />
     public override Guid Id => PluginId;
@@ -48,7 +48,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             DisplayName = Name,
             EmbeddedResourcePath = string.Format(
                 CultureInfo.InvariantCulture,
-                "{0}.Web.AdministratorEnhancements.html",
+                "{0}.Web.AdminEnhancements.html",
                 GetType().Namespace),
             EnableInMainMenu = true,
             MenuSection = "Administration",

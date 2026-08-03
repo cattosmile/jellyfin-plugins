@@ -1,6 +1,6 @@
 using MediaBrowser.Model.Plugins;
 
-namespace Jellyfin.Plugin.AdministratorEnhancements.Configuration;
+namespace Jellyfin.Plugin.AdminEnhancements.Configuration;
 
 /// <summary>
 /// Configuration for server-administration quality-of-life features.

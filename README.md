@@ -1,7 +1,7 @@
 # The great Cattomile's greatest Jellyfin Plugins
 
 - **Disk Space Indicator** — shows the complete filesystem volume usage in Jellyfin's drawer and provides a full library scan shortcut.
-- **Jellyfin Administrator Enhancements** — synchronizes Jellyfin media deletions with Seerr.
+- **Admin Enhancements** — synchronizes Jellyfin media deletions with Seerr.
 
 ## Install from the shared repository
 

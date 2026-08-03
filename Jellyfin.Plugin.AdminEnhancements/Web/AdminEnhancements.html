@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Jellyfin Administrator Enhancements</title>
+    <title>Admin Enhancements</title>
 </head>
 <body>
-    <div id="AdministratorEnhancementsPage" data-role="page" class="page type-interior">
+    <div id="AdminEnhancementsPage" data-role="page" class="page type-interior">
         <div>
             <div class="content-primary">
                 <form class="pluginConfigurationForm">
                     <div class="verticalSection">
                         <div class="sectionTitleContainer flex align-items-center">
-                            <h1 class="sectionTitle">Jellyfin Administrator Enhancements</h1>
+                            <h1 class="sectionTitle">Admin Enhancements</h1>
                         </div>
 
                         <fieldset class="verticalSection verticalSection-extrabottompadding">
@@ -58,7 +58,7 @@
         <script>
         (function () {
             const pluginId = 'b4b0f4e9-d7ea-4c70-a4d6-4da8a3d5c0ce';
-            const page = document.querySelector('#AdministratorEnhancementsPage');
+            const page = document.querySelector('#AdminEnhancementsPage');
             const form = page.querySelector('form');
             const url = page.querySelector('#SeerrUrl');
             const apiKey = page.querySelector('#SeerrApiKey');
@@ -90,7 +90,7 @@
                 setStatus(connectionStatus, 'Testing connection…', false);
                 window.ApiClient.ajax({
                     type: 'POST',
-                    url: window.ApiClient.getUrl('AdministratorEnhancements/TestConnection'),
+                    url: window.ApiClient.getUrl('AdminEnhancements/TestConnection'),
                     dataType: 'json',
                     data: JSON.stringify({
                         SeerrUrl: url.value.trim(),

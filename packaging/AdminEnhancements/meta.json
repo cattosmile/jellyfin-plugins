@@ -1,12 +1,12 @@
 {
     "category": "General",
-    "changelog": "Initial public release with disabled-by-default Seerr deletion synchronization.",
+    "changelog": "Renamed to Admin Enhancements and updated its Jellyfin routes.",
     "description": "Synchronizes Jellyfin movie and series deletions with matching Seerr requests and Radarr/Sonarr media files.",
     "guid": "b4b0f4e9-d7ea-4c70-a4d6-4da8a3d5c0ce",
-    "name": "Jellyfin Administrator Enhancements",
+    "name": "Admin Enhancements",
     "overview": "Reduce manual cleanup after deleting media from Jellyfin.",
     "owner": "cattosmile",
     "targetAbi": "10.11.0.0",
-    "timestamp": "2026-08-03T00:00:00Z",
-    "version": "0.1.0.0"
+    "timestamp": "2026-08-03T01:17:40Z",
+    "version": "0.1.1.0"
 }

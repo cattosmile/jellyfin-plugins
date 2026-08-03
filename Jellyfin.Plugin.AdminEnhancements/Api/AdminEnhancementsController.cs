@@ -1,6 +1,6 @@
 using System.Net.Mime;
 using System.Net.Http.Json;
-using Jellyfin.Plugin.AdministratorEnhancements.Configuration;
+using Jellyfin.Plugin.AdminEnhancements.Configuration;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Tasks;
@@ -8,15 +8,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Jellyfin.Plugin.AdministratorEnhancements.Api;
+namespace Jellyfin.Plugin.AdminEnhancements.Api;
 
 /// <summary>
 /// Administrator-only endpoints for the administrator enhancements configuration page.
 /// </summary>
 [ApiController]
-[Route("AdministratorEnhancements")]
+[Route("AdminEnhancements")]
 [Produces(MediaTypeNames.Application.Json)]
-public sealed class AdministratorEnhancementsController : ControllerBase
+public sealed class AdminEnhancementsController : ControllerBase
 {
     private const string LibraryScanTaskKey = "RefreshLibrary";
     private static readonly HttpClient HttpClient = new();
@@ -26,11 +26,11 @@ public sealed class AdministratorEnhancementsController : ControllerBase
     private readonly ITaskManager taskManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AdministratorEnhancementsController"/> class.
+    /// Initializes a new instance of the <see cref="AdminEnhancementsController"/> class.
     /// </summary>
     /// <param name="libraryManager">The Jellyfin library manager.</param>
     /// <param name="taskManager">The Jellyfin scheduled task manager.</param>
-    public AdministratorEnhancementsController(ILibraryManager libraryManager, ITaskManager taskManager)
+    public AdminEnhancementsController(ILibraryManager libraryManager, ITaskManager taskManager)
     {
         this.libraryManager = libraryManager;
         this.taskManager = taskManager;

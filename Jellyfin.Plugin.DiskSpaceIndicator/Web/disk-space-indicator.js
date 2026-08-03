@@ -355,7 +355,7 @@
         }
 
         scanStatusRequestInFlight = true;
-        Promise.resolve(apiClient.getJSON(apiClient.getUrl('AdministratorEnhancements/ScanStatus'), true)).then(function (status) {
+        Promise.resolve(apiClient.getJSON(apiClient.getUrl('AdminEnhancements/ScanStatus'), true)).then(function (status) {
             renderScanStatus(status);
             if (status.IsRunning || status.isRunning) {
                 scheduleScanStatus();
@@ -387,7 +387,7 @@
 
         apiClient.ajax({
             type: 'POST',
-            url: apiClient.getUrl('AdministratorEnhancements/ScanLibraries'),
+            url: apiClient.getUrl('AdminEnhancements/ScanLibraries'),
             dataType: 'json'
         }).then(function (status) {
             renderScanStatus(status);
