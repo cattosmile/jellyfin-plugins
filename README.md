@@ -1,7 +1,7 @@
 # Jellyfin Plugins
 
 - **Disk Space Indicator** — shows the complete filesystem volume usage in Jellyfin's drawer and provides a full library scan shortcut.
-- **Jellyfin Administrator Enhancements** — Synchronizes Jellyfin media deletions with Seerr. 
+- **Jellyfin Administrator Enhancements** — synchronizes Jellyfin media deletions with Seerr.
 
 ## Install from the shared repository
 
@@ -13,9 +13,9 @@ https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/manifest.json
 
 ## Disk Space Indicator
 
-The plugin reads the filesystem volume containing `/`, so it reports the complete host-file systems availale stpace and totalö space
+The plugin reads the filesystem volume containing `/`, so it reports the host filesystem's total and available space.
 
-The `Scan All Libraries` action calls Jellyfin's normal library scan task. 
+The `Scan All Libraries` action calls Jellyfin's normal library scan task.
 
 ## Admin Enhancements
 
