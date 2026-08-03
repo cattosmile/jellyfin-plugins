@@ -13,7 +13,7 @@ https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/manifest.json
 
 ## Disk Space Indicator
 
-The plugin reads the filesystem volume containing `/` by default, so it reports the complete volume visible to the Jellyfin container rather than only media-library files. Its drawer card is server-side and uses the current Jellyfin user's authenticated session.
+The plugin reads the filesystem volume containing `/`, so it reports the complete host-file systems availale stpace and totalö space
 
 The `Scan All Libraries` action calls Jellyfin's normal library scan task. 
 
