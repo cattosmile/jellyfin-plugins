@@ -8,14 +8,6 @@
         "category": "General",
         "versions": [
             {
-                "version": "0.1.2.0",
-                "changelog": "Adds a Firefox-safe pointer fallback for opening the audio delay dialog.",
-                "targetAbi": "10.11.0.0",
-                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.2.0.zip",
-                "checksum": "7fb21d08a13bef4dba404923534597c7",
-                "timestamp": "2026-08-09T19:22:36Z"
-            },
-            {
                 "version": "0.1.1.0",
                 "changelog": "Updated the library-scan route for Admin Enhancements.",
                 "targetAbi": "10.11.0.0",
@@ -51,6 +43,14 @@
         "owner": "cattosmile",
         "category": "General",
         "versions": [
+            {
+                "version": "0.1.2.0",
+                "changelog": "Adds a Firefox-safe pointer fallback for opening the audio delay dialog.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.2.0.zip",
+                "checksum": "7fb21d08a13bef4dba404923534597c7",
+                "timestamp": "2026-08-09T19:22:36Z"
+            },
             {
                 "version": "0.1.1.0",
                 "changelog": "Fixes action-sheet scrolling and dialog interaction in Firefox and Chromium.",
