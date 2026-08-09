@@ -33,12 +33,13 @@
         profileContext: '',
         profileRequestToken: 0,
         priming: false,
+        dialogOpenPending: false,
         dialog: null,
         scanTimer: null
     };
 
     window.__JellyfinAudioDelay = {
-        version: '0.1.1.0',
+        version: '0.1.2.0',
         getState: function () {
             return {
                 seriesId: state.seriesId,
@@ -784,6 +785,8 @@
         item.className = 'listItem listItem-button actionSheetMenuItem emby-button ' + MENU_CLASS;
         item.setAttribute('data-id', 'audio-delay');
         item.innerHTML = '<div class="listItemBody actionsheetListItemBody"><div class="listItemBodyText actionSheetItemText">Audio Delay</div></div><div class="listItemAside actionSheetItemAsideText">Off</div>';
+        item.addEventListener('pointerup', requestDelayDialog);
+        item.addEventListener('click', requestDelayDialog);
         scroller.appendChild(item);
         updateMenuItem();
     }
@@ -804,6 +807,25 @@
         }
     }
 
+    function requestDelayDialog() {
+        if (state.dialogOpenPending || state.dialog) {
+            return;
+        }
+
+        state.dialogOpenPending = true;
+        if (!state.currentTrack) {
+            // Keep track discovery inside the user gesture. Firefox can reject a
+            // later programmatic click after the gesture has already returned.
+            primeTrack();
+        }
+
+        const wait = state.currentTrack ? 0 : 140;
+        window.setTimeout(function () {
+            state.dialogOpenPending = false;
+            openDelayDialog();
+        }, wait);
+    }
+
     function onDocumentClick(event) {
         const target = event.target instanceof Element ? event.target : null;
         if (!target) {
@@ -812,7 +834,7 @@
 
         if (target.closest(`.${MENU_CLASS}`)) {
             // Let Jellyfin's own action-sheet handler resolve and close this menu item.
-            window.setTimeout(openDelayDialog, 0);
+            requestDelayDialog();
             return;
         }
 
