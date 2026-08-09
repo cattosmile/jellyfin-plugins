@@ -38,7 +38,7 @@
     };
 
     window.__JellyfinAudioDelay = {
-        version: '0.1.0.0',
+        version: '0.1.1.0',
         getState: function () {
             return {
                 seriesId: state.seriesId,
@@ -657,6 +657,14 @@
             return;
         }
 
+        const container = sheet.closest('.dialogContainer');
+        const backdrop = sheet.backdrop instanceof Element
+            ? sheet.backdrop
+            : container && container.previousElementSibling &&
+                container.previousElementSibling.classList.contains('dialogBackdrop')
+                ? container.previousElementSibling
+                : null;
+
         // Jellyfin closes action sheets from an outside pointer gesture rather than
         // from the full-screen dialog container itself.
         ['pointerdown', 'mousedown', 'mouseup', 'click'].forEach(function (type) {
@@ -670,13 +678,19 @@
         });
 
         window.setTimeout(function () {
-            if (!sheet.isConnected || !sheet.classList.contains('opened')) {
+            if (!sheet.isConnected && (!container || !container.isConnected)) {
                 return;
             }
 
-            const container = sheet.closest('.dialogContainer');
-            (container || sheet).remove();
-        }, 120);
+            if (backdrop && backdrop.isConnected) {
+                backdrop.remove();
+            }
+            if (container && container.isConnected) {
+                container.remove();
+            } else if (sheet.isConnected) {
+                sheet.remove();
+            }
+        }, 450);
     }
 
     function closeActionSheets() {
@@ -757,6 +771,8 @@
             return;
         }
 
+        sheet.classList.add('audio-delay-settings-sheet');
+
         const scroller = statsButton.parentElement;
         if (!scroller || scroller.querySelector(`.${MENU_CLASS}`)) {
             return;
@@ -795,9 +811,8 @@
         }
 
         if (target.closest(`.${MENU_CLASS}`)) {
-            event.preventDefault();
             // Let Jellyfin's own action-sheet handler resolve and close this menu item.
-            window.setTimeout(openDelayDialog, 250);
+            window.setTimeout(openDelayDialog, 0);
             return;
         }
 
@@ -882,21 +897,35 @@
         }
     }
 
-    function openDelayDialog() {
-        if (!state.currentTrack) {
-            closeActionSheets();
-            primeTrack();
-            window.setTimeout(function () {
-                if (state.currentTrack) {
-                    closeActionSheets();
-                    window.setTimeout(openDelayDialog, 180);
-                }
-            }, 150);
+    function openDelayDialog(attempt) {
+        const currentAttempt = Number.isInteger(attempt) ? attempt : 0;
+
+        if (state.dialog) {
+            renderDialog();
             return;
         }
 
-        closeActionSheets();
-        window.setTimeout(openDelayDialogNow, 180);
+        if (document.querySelector('.actionSheet.opened')) {
+            closeActionSheets();
+            if (currentAttempt < 20) {
+                window.setTimeout(function () {
+                    openDelayDialog(currentAttempt + 1);
+                }, 80);
+            }
+            return;
+        }
+
+        if (!state.currentTrack) {
+            primeTrack();
+            if (currentAttempt < 20) {
+                window.setTimeout(function () {
+                    openDelayDialog(currentAttempt + 1);
+                }, 80);
+            }
+            return;
+        }
+
+        openDelayDialogNow();
     }
 
     function openDelayDialogNow() {
@@ -912,7 +941,7 @@
         const overlay = document.createElement('div');
         overlay.className = 'audio-delay-overlay';
         overlay.innerHTML = `
-            <div class="audio-delay-dialog dialog centeredDialog" role="dialog" aria-modal="true" aria-labelledby="audio-delay-title">
+            <div class="audio-delay-dialog audio-delay-panel" role="dialog" aria-modal="true" aria-labelledby="audio-delay-title">
                 <div class="audio-delay-dialog-header">
                     <h2 id="audio-delay-title">Audio Delay</h2>
                     <button type="button" class="paper-icon-button-light audio-delay-close" title="Close" aria-label="Close">
@@ -1005,15 +1034,26 @@
             .audio-delay-overlay {
                 position: fixed;
                 inset: 0;
-                z-index: 10000;
+                z-index: 100000;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 box-sizing: border-box;
                 padding: 1em;
                 background: rgba(0, 0, 0, .62);
+                isolation: isolate;
+                pointer-events: auto;
+            }
+            .audio-delay-settings-sheet .actionSheetContent {
+                max-height: calc(100vh - 1em);
+            }
+            .audio-delay-settings-sheet .actionSheetScroller {
+                max-height: calc(100vh - 5em);
+                overflow-y: auto;
+                overscroll-behavior: contain;
             }
             .audio-delay-dialog {
+                pointer-events: auto;
                 box-sizing: border-box;
                 width: min(34em, calc(100vw - 2em));
                 max-height: calc(100vh - 2em);

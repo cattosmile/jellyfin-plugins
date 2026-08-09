@@ -44,6 +44,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "0.1.1.0",
+                "changelog": "Fixes action-sheet scrolling and dialog interaction in Firefox and Chromium.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.1.0.zip",
+                "checksum": "457fd367322fbca9aa683e0d70ad9213",
+                "timestamp": "2026-08-09T18:52:27Z"
+            },
+            {
                 "version": "0.1.0.0",
                 "changelog": "Initial release with per-track audio delay and season locks.",
                 "targetAbi": "10.11.0.0",
