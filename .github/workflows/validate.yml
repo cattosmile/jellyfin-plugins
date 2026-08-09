@@ -22,5 +22,8 @@ jobs:
       - name: Build Admin Enhancements
         run: dotnet build Jellyfin.Plugin.AdminEnhancements/Jellyfin.Plugin.AdminEnhancements.csproj --configuration Release
 
+      - name: Build Audio Delay
+        run: dotnet build Jellyfin.Plugin.AudioDelay/Jellyfin.Plugin.AudioDelay.csproj --configuration Release
+
       - name: Validate repository manifest
         run: node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')); console.log('manifest.json is valid JSON')"

@@ -34,5 +34,23 @@
                 "timestamp": "2026-08-03T01:17:40Z"
             }
         ]
+    },
+    {
+        "guid": "5b4b4e4f-8f76-4a5b-9e80-2d3c3d0fcb18",
+        "name": "Audio Delay",
+        "description": "Adjusts audio timing in the Jellyfin web player and can lock a per-track delay for an entire series season.",
+        "overview": "Fix audio that is ahead of or behind the picture.",
+        "owner": "cattosmile",
+        "category": "General",
+        "versions": [
+            {
+                "version": "0.1.0.0",
+                "changelog": "Initial release with per-track audio delay and season locks.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.0.0.zip",
+                "checksum": "bd2e5aaa0bd79d1bd7f974fb074cb9ad",
+                "timestamp": "2026-08-09T18:01:04Z"
+            }
+        ]
     }
 ]
