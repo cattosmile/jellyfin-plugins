@@ -41,7 +41,7 @@
     };
 
     window.__JellyfinAudioDelay = {
-        version: '0.1.3.0',
+        version: '0.1.7.0',
         getState: function () {
             return {
                 seriesId: state.seriesId,
@@ -841,8 +841,60 @@
         });
     }
 
+    function isVisibleElement(element) {
+        if (!element || !element.isConnected) {
+            return false;
+        }
+
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 &&
+            style.display !== 'none' && style.visibility !== 'hidden';
+    }
+
+    function fitSettingsSheet(sheet) {
+        if (!sheet || !sheet.isConnected) {
+            return;
+        }
+
+        // Jellyfin leaves an inline top offset from the opening animation. Clear it
+        // before applying the bottom offset so the sheet keeps its content height.
+        sheet.style.setProperty('top', 'auto');
+        sheet.style.removeProperty('--audio-delay-sheet-lift');
+        const rect = sheet.getBoundingClientRect();
+        const item = sheet.querySelector(`.${MENU_CLASS}`);
+        const itemRect = item ? item.getBoundingClientRect() : null;
+        const viewportBottom = Math.min(
+            window.innerHeight,
+            document.documentElement.clientHeight || window.innerHeight
+        );
+        const contentBottom = Math.max(rect.bottom, itemRect ? itemRect.bottom : 0);
+        const lift = Math.max(0, contentBottom - (viewportBottom - 8));
+        if (lift) {
+            sheet.style.setProperty('--audio-delay-sheet-lift', `${Math.ceil(lift)}px`);
+        }
+    }
+
+    function scheduleSettingsSheetFit(sheet) {
+        if (!sheet || sheet.__audioDelayFitFrame) {
+            return;
+        }
+
+        const requestFrame = window.requestAnimationFrame || function (callback) {
+            return window.setTimeout(callback, 0);
+        };
+        sheet.__audioDelayFitFrame = requestFrame(function () {
+            sheet.__audioDelayFitFrame = null;
+            fitSettingsSheet(sheet);
+        });
+    }
+
     function ensureMenuItem() {
-        const statsButton = document.querySelector('.actionSheet.opened button[data-id="stats"]');
+        const statsButton = Array.from(document.querySelectorAll('.actionSheet.opened button[data-id="stats"]'))
+            .find(function (button) {
+                const sheet = button.closest('.actionSheet');
+                return isVisibleElement(button) && isVisibleElement(sheet);
+            });
         if (!statsButton) {
             return;
         }
@@ -856,7 +908,12 @@
         sheet.classList.add('audio-delay-settings-sheet');
 
         const scroller = statsButton.parentElement;
-        if (!scroller || scroller.querySelector(`.${MENU_CLASS}`)) {
+        if (!scroller) {
+            return;
+        }
+
+        if (scroller.querySelector(`.${MENU_CLASS}`)) {
+            scheduleSettingsSheetFit(sheet);
             return;
         }
 
@@ -868,24 +925,22 @@
         item.innerHTML = '<div class="listItemBody actionsheetListItemBody"><div class="listItemBodyText actionSheetItemText">Audio Delay</div></div><div class="listItemAside actionSheetItemAsideText">Off</div>';
         item.addEventListener('pointerup', requestDelayDialog);
         item.addEventListener('click', requestDelayDialog);
-        scroller.appendChild(item);
+        statsButton.insertAdjacentElement('afterend', item);
         updateMenuItem();
+        scheduleSettingsSheetFit(sheet);
     }
 
     function updateMenuItem() {
-        const item = document.querySelector(`.${MENU_CLASS}`);
-        if (!item) {
-            return;
-        }
-
-        const label = item.querySelector('.actionSheetItemText');
-        const aside = item.querySelector('.actionSheetItemAsideText');
-        if (label) {
-            label.textContent = 'Audio Delay';
-        }
-        if (aside) {
-            aside.textContent = state.delayMs === 0 ? 'Off' : formatDelay(state.delayMs);
-        }
+        Array.from(document.querySelectorAll(`.${MENU_CLASS}`)).forEach(function (item) {
+            const label = item.querySelector('.actionSheetItemText');
+            const aside = item.querySelector('.actionSheetItemAsideText');
+            if (label) {
+                label.textContent = 'Audio Delay';
+            }
+            if (aside) {
+                aside.textContent = state.delayMs === 0 ? 'Off' : formatDelay(state.delayMs);
+            }
+        });
     }
 
     function requestDelayDialog() {
@@ -993,10 +1048,14 @@
         state.dialog.season.textContent = state.seasonNumber === null
             ? 'Current season'
             : `Season ${state.seasonNumber}`;
-        state.dialog.lock.textContent = isLocked() ? 'Unlock for this season' : 'Lock for this season';
+        const locked = isLocked();
+        const label = state.dialog.lock.querySelector('.audio-delay-lock-label');
+        if (label) {
+            label.textContent = locked ? 'Unlock for this season' : 'Lock for this season';
+        }
         const icon = state.dialog.lock.querySelector('.material-icons');
         if (icon) {
-            icon.textContent = isLocked() ? 'lock_open' : 'lock';
+            icon.textContent = locked ? 'lock_open' : 'lock';
         }
     }
 
@@ -1042,32 +1101,35 @@
         }
 
         const overlay = document.createElement('div');
-        overlay.className = 'audio-delay-overlay';
+        overlay.className = 'dialogContainer audio-delay-overlay';
         overlay.innerHTML = `
-            <div class="audio-delay-dialog audio-delay-panel" role="dialog" aria-modal="true" aria-labelledby="audio-delay-title">
-                <div class="audio-delay-dialog-header">
-                    <h2 id="audio-delay-title">Audio Delay</h2>
-                    <button type="button" class="paper-icon-button-light audio-delay-close" title="Close" aria-label="Close">
+            <div class="focuscontainer dialog opened audio-delay-dialog" role="dialog" aria-modal="true" aria-labelledby="audio-delay-title">
+                <div class="formDialogHeader audio-delay-dialog-header">
+                    <h3 id="audio-delay-title" class="formDialogHeaderTitle">Audio Delay</h3>
+                    <button is="paper-icon-button-light" type="button" class="paper-icon-button-light audio-delay-close" title="Close" aria-label="Close">
                         <span class="material-icons">close</span>
                     </button>
                 </div>
-                <div class="dialogContentInner">
-                    <div class="audio-delay-track" aria-live="polite"></div>
-                    <div class="fieldDescription audio-delay-season"></div>
-                    <div class="inputContainer audio-delay-control">
-                        <label for="audio-delay-range">Delay</label>
-                        <div class="audio-delay-inputs">
-                            <input id="audio-delay-range" type="range" min="${MIN_DELAY_MS}" max="${MAX_DELAY_MS}" step="10" aria-label="Audio delay">
-                            <input id="audio-delay-number" type="number" min="${MIN_DELAY_MS}" max="${MAX_DELAY_MS}" step="1" aria-label="Audio delay in milliseconds">
-                            <span class="audio-delay-unit">ms</span>
+                <div class="formDialogContent smoothScrollY audio-delay-dialog-content">
+                    <div class="dialogContentInner">
+                        <div class="audio-delay-track" aria-live="polite"></div>
+                        <div class="fieldDescription audio-delay-season"></div>
+                        <div class="inputContainer audio-delay-control">
+                            <label class="inputLabel inputLabelUnfocused" for="audio-delay-range">Delay</label>
+                            <div class="audio-delay-inputs">
+                                <input is="emby-slider" class="emby-slider audio-delay-range" id="audio-delay-range" type="range" min="${MIN_DELAY_MS}" max="${MAX_DELAY_MS}" step="10" aria-label="Audio delay">
+                                <div class="audio-delay-number-field">
+                                    <input is="emby-input" class="emby-input audio-delay-number" id="audio-delay-number" type="number" min="${MIN_DELAY_MS}" max="${MAX_DELAY_MS}" step="1" aria-label="Audio delay in milliseconds">
+                                    <span class="audio-delay-unit">ms</span>
+                                </div>
+                            </div>
+                            <div class="audio-delay-value fieldDescription" aria-live="polite"></div>
                         </div>
-                        <div class="fieldDescription">Positive values delay the audio. Negative values advance it.</div>
-                        <div class="audio-delay-value" aria-live="polite"></div>
-                    </div>
-                    <div class="audio-delay-status fieldDescription" role="status" aria-live="polite"></div>
-                    <div class="audio-delay-actions">
-                        <button type="button" class="raised audio-delay-reset"><span class="material-icons">restart_alt</span><span>Reset</span></button>
-                        <button type="button" class="raised button-submit audio-delay-lock"><span class="material-icons">lock</span><span>Lock for this season</span></button>
+                        <div class="audio-delay-status fieldDescription" role="status" aria-live="polite"></div>
+                        <div class="audio-delay-actions">
+                            <button is="emby-button" type="button" class="raised button-cancel emby-button audio-delay-reset"><span class="material-icons">restart_alt</span><span>Reset</span></button>
+                            <button is="emby-button" type="button" class="raised button-submit emby-button audio-delay-lock"><span class="material-icons">lock</span><span class="audio-delay-lock-label">Lock for this season</span></button>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -1147,82 +1209,98 @@
                 isolation: isolate;
                 pointer-events: auto;
             }
+            .audio-delay-settings-sheet {
+                bottom: var(--audio-delay-sheet-lift, 0px);
+                min-height: 0;
+            }
             .audio-delay-settings-sheet .actionSheetContent {
+                min-height: 0;
                 max-height: calc(100vh - 1em);
             }
             .audio-delay-settings-sheet .actionSheetScroller {
+                min-height: 0;
                 max-height: calc(100vh - 5em);
                 overflow-y: auto;
                 overscroll-behavior: contain;
             }
             .audio-delay-dialog {
+                position: relative;
                 pointer-events: auto;
                 box-sizing: border-box;
-                width: min(34em, calc(100vw - 2em));
+                width: min(30em, calc(100vw - 2em));
+                height: auto;
+                min-height: 0;
                 max-height: calc(100vh - 2em);
-                overflow: auto;
-                color: rgba(255, 255, 255, .9);
-                background: #101010;
-                box-shadow: 0 0.4em 1.4em rgba(0, 0, 0, .5);
+                overflow: hidden;
             }
             .audio-delay-dialog-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: .75em;
-                padding: 1.2em 1.35em .55em;
+                box-sizing: border-box;
+                padding: .85em 1em .65em 1.35em;
             }
-            .audio-delay-dialog-header h2 {
+            .audio-delay-dialog-header .formDialogHeaderTitle {
+                flex: 1 1 auto;
                 margin: 0;
-                font-size: 1.35em;
-                font-weight: 400;
             }
             .audio-delay-close {
                 flex: 0 0 auto;
             }
+            .audio-delay-dialog-content {
+                max-height: calc(100vh - 6em);
+                overflow-y: auto;
+                overscroll-behavior: contain;
+            }
+            .audio-delay-dialog .dialogContentInner {
+                padding: .85em 1.5em 1.35em;
+            }
             .audio-delay-track {
                 overflow-wrap: anywhere;
-                color: rgba(255, 255, 255, .92);
                 font-size: 1em;
             }
             .audio-delay-season {
                 margin-top: .35em;
             }
             .audio-delay-control {
-                margin-top: 1.25em;
+                margin: 1.1em 0 0;
             }
             .audio-delay-inputs {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) 6.3em auto;
+                grid-template-columns: minmax(0, 1fr) 8.25em;
                 align-items: center;
                 gap: .75em;
-                margin-top: .5em;
+                margin-top: .35em;
             }
-            .audio-delay-inputs input[type="range"] {
-                min-width: 0;
-                accent-color: #00a4dc;
-            }
-            .audio-delay-inputs input[type="number"] {
-                box-sizing: border-box;
+            .audio-delay-range {
                 width: 100%;
-                min-height: 2.35em;
-                padding: .35em .45em;
-                color: rgba(255, 255, 255, .92);
-                border: 1px solid rgba(255, 255, 255, .38);
-                border-radius: .15em;
-                background: rgba(255, 255, 255, .08);
+                min-width: 0;
+            }
+            .audio-delay-number-field {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+                gap: .45em;
+                min-width: 0;
+            }
+            .audio-delay-number {
+                width: 100%;
+                min-width: 0;
+                margin: 0;
             }
             .audio-delay-unit {
-                color: rgba(255, 255, 255, .66);
+                opacity: .7;
             }
             .audio-delay-value {
-                margin-top: .55em;
-                color: #00a4dc;
+                margin-top: .35em;
                 font-variant-numeric: tabular-nums;
             }
             .audio-delay-status {
-                min-height: 1.35em;
-                margin-top: 1em;
+                margin-top: .85em;
+            }
+            .audio-delay-status:empty {
+                display: none;
             }
             .audio-delay-status-error {
                 color: #ffb4ab;
@@ -1232,7 +1310,7 @@
                 flex-wrap: wrap;
                 justify-content: flex-end;
                 gap: .65em;
-                margin-top: 1.2em;
+                margin-top: 1em;
             }
             .audio-delay-actions button {
                 display: inline-flex;
@@ -1245,8 +1323,12 @@
             }
             @media (max-width: 30em) {
                 .audio-delay-inputs {
-                    grid-template-columns: minmax(0, 1fr) 5.8em auto;
-                    gap: .45em;
+                    grid-template-columns: minmax(0, 1fr);
+                    gap: .6em;
+                }
+                .audio-delay-number-field {
+                    width: 8.25em;
+                    justify-self: end;
                 }
                 .audio-delay-actions {
                     justify-content: stretch;
@@ -1263,6 +1345,10 @@
         addStyles();
         document.addEventListener('click', onDocumentClick, true);
         new MutationObserver(scheduleScan).observe(document.documentElement, { childList: true, subtree: true });
+        window.addEventListener('resize', function () {
+            const sheet = document.querySelector('.actionSheet.opened.audio-delay-settings-sheet');
+            scheduleSettingsSheetFit(sheet);
+        });
         state.secondaryTimer = window.setInterval(function () {
             if (state.customAudio) {
                 syncSecondaryAudio(false);

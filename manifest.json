@@ -44,6 +44,38 @@
         "category": "General",
         "versions": [
             {
+                "version": "0.1.7.0",
+                "changelog": "Uses Jellyfin dialog controls and a compact layout for the Audio Delay editor.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.7.0.zip",
+                "checksum": "3cae6ff79d72081d3cf707cd8dc35216",
+                "timestamp": "2026-08-09T22:30:58Z"
+            },
+            {
+                "version": "0.1.6.0",
+                "changelog": "Fixes the Firefox settings-sheet position so Audio Delay remains visible below Playback Info.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.6.0.zip",
+                "checksum": "629776cc05c3f11da8843fd5100a76de",
+                "timestamp": "2026-08-09T21:54:42Z"
+            },
+            {
+                "version": "0.1.5.0",
+                "changelog": "Places Audio Delay directly below Playback Info and keeps the settings menu above the player controls.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.5.0.zip",
+                "checksum": "01f7a766340c508b4bf8d31314fab16b",
+                "timestamp": "2026-08-09T21:23:44Z"
+            },
+            {
+                "version": "0.1.4.0",
+                "changelog": "Keeps the Audio Delay action visible inside the Jellyfin player settings menu on smaller viewports.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.4.0.zip",
+                "checksum": "3bc82b48a39267ecc57f41e3fb3244aa",
+                "timestamp": "2026-08-09T20:45:31Z"
+            },
+            {
                 "version": "0.1.3.0",
                 "changelog": "Reads the active audio track from the Jellyfin session so the dialog opens reliably in Firefox.",
                 "targetAbi": "10.11.0.0",
