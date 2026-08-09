@@ -1,12 +1,12 @@
 {
     "category": "General",
-    "changelog": "Adds a Firefox-safe pointer fallback for opening the audio delay dialog.",
+    "changelog": "Reads the active audio track from the Jellyfin session so the dialog opens reliably in Firefox.",
     "description": "Adjusts audio timing in the Jellyfin web player and can lock a per-track delay for an entire series season.",
     "guid": "5b4b4e4f-8f76-4a5b-9e80-2d3c3d0fcb18",
     "name": "Audio Delay",
     "overview": "Fix audio that is ahead of or behind the picture.",
     "owner": "cattosmile",
     "targetAbi": "10.11.0.0",
-    "timestamp": "2026-08-09T19:22:36Z",
-    "version": "0.1.2.0"
+    "timestamp": "2026-08-09T20:05:28Z",
+    "version": "0.1.3.0"
 }

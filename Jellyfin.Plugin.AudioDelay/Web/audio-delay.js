@@ -33,13 +33,15 @@
         profileContext: '',
         profileRequestToken: 0,
         priming: false,
+        trackRequestAt: 0,
+        trackRequestToken: 0,
         dialogOpenPending: false,
         dialog: null,
         scanTimer: null
     };
 
     window.__JellyfinAudioDelay = {
-        version: '0.1.2.0',
+        version: '0.1.3.0',
         getState: function () {
             return {
                 seriesId: state.seriesId,
@@ -569,6 +571,9 @@
         state.currentTrack = null;
         state.profile = null;
         state.profileContext = '';
+        state.trackRequestToken += 1;
+        state.priming = false;
+        state.trackRequestAt = 0;
         state.seriesId = '';
         state.seasonNumber = null;
         state.mediaKey = '';
@@ -651,6 +656,75 @@
             return icon && window.getComputedStyle(icon).visibility !== 'hidden';
         });
         return readTrackButton(selected || buttons[0]);
+    }
+
+    function getSessionTrack() {
+        const apiClient = getApiClient();
+        if (!apiClient || typeof apiClient.getJSON !== 'function') {
+            return Promise.resolve(null);
+        }
+
+        let deviceId = '';
+        try {
+            deviceId = typeof apiClient.deviceId === 'function' ? apiClient.deviceId() : '';
+        } catch (error) {
+            deviceId = '';
+        }
+
+        return apiClient.getJSON(apiClient.getUrl('Sessions'), true).then(function (sessions) {
+            if (!Array.isArray(sessions)) {
+                return null;
+            }
+
+            const playingSessions = sessions.filter(function (session) {
+                return session && session.NowPlayingItem && session.PlayState;
+            });
+            const session = playingSessions.find(function (candidate) {
+                return deviceId && candidate.DeviceId === deviceId;
+            }) || playingSessions[0];
+            if (!session) {
+                return null;
+            }
+
+            const playState = session.PlayState;
+            const streamIndex = Number(playState.AudioStreamIndex);
+            const item = session.NowPlayingItem;
+            const streams = Array.isArray(item.MediaStreams)
+                ? item.MediaStreams
+                : Array.isArray(item.MediaSources) && item.MediaSources[0]
+                    ? item.MediaSources[0].MediaStreams || []
+                    : [];
+            const audioStreams = streams.filter(function (stream) {
+                return stream && String(stream.Type || '').toLocaleLowerCase() === 'audio';
+            });
+            const selected = Number.isFinite(streamIndex)
+                ? audioStreams.find(function (stream) {
+                    return Number(stream.Index) === streamIndex;
+                })
+                : null;
+            const stream = selected || audioStreams.find(function (candidate) {
+                return candidate.IsDefault;
+            }) || audioStreams[0];
+            if (!stream) {
+                return null;
+            }
+
+            const label = normalizeText(stream.DisplayTitle || stream.Title || stream.Language);
+            if (!label) {
+                return null;
+            }
+
+            const id = stream.Index === undefined || stream.Index === null
+                ? Number.isFinite(streamIndex) ? String(streamIndex) : ''
+                : String(stream.Index);
+            return {
+                id,
+                label,
+                key: normalizeTrackKey(label)
+            };
+        }).catch(function () {
+            return null;
+        });
     }
 
     function closeActionSheet(sheet) {
@@ -739,25 +813,32 @@
             return;
         }
 
-        const audioButton = document.querySelector('.btnAudio');
-        if (!audioButton) {
-            window.setTimeout(primeTrack, 300);
+        if (state.trackRequestAt && Date.now() - state.trackRequestAt < 500) {
             return;
         }
 
         state.priming = true;
-        audioButton.click();
-        window.setTimeout(function () {
-            const sheet = findAudioSheet();
-            if (sheet) {
-                setCurrentTrack(readSelectedTrack(sheet));
-                closeActionSheet(sheet);
+        state.trackRequestAt = Date.now();
+        const requestToken = ++state.trackRequestToken;
+        getSessionTrack().then(function (track) {
+            if (requestToken !== state.trackRequestToken || !state.video || !track) {
+                return;
             }
+
+            setCurrentTrack(track);
+        }).finally(function () {
+            if (requestToken !== state.trackRequestToken) {
+                return;
+            }
+
             state.priming = false;
             if (!state.currentTrack) {
-                window.setTimeout(primeTrack, 300);
+                window.setTimeout(function () {
+                    state.trackRequestAt = 0;
+                    primeTrack();
+                }, 500);
             }
-        }, 80);
+        });
     }
 
     function ensureMenuItem() {
