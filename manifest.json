@@ -44,6 +44,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "0.1.12.0",
+                "changelog": "Supports delay controls for films and disables season locks where no season exists.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.12.0.zip",
+                "checksum": "c418495bade6ec92ccf10091558546df",
+                "timestamp": "2026-08-10T01:10:00Z"
+            },
+            {
                 "version": "0.1.11.0",
                 "changelog": "Handles the empty 204 response returned when a season lock is removed.",
                 "targetAbi": "10.11.0.0",

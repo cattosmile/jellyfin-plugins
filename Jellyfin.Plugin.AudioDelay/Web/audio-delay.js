@@ -44,11 +44,12 @@
     };
 
     window.__JellyfinAudioDelay = {
-        version: '0.1.11.0',
+        version: '0.1.12.0',
         getState: function () {
             return {
                 seriesId: state.seriesId,
                 seasonNumber: state.seasonNumber,
+                seasonLockable: isSeasonLockable(),
                 track: state.currentTrack ? state.currentTrack.label : '',
                 delayMs: state.delayMs,
                 locked: isLocked(),
@@ -116,18 +117,22 @@
             .map(element => normalizeText(element.textContent))
             .find(text => /\bS\d+\s*:\s*E\d+\b/i.test(text)) || '';
         const seasonMatch = heading.match(/\bS(\d+)\s*:\s*E\d+\b/i);
-        const seriesId = seriesMatch ? seriesMatch[1].toLowerCase() : '';
-        const seasonNumber = seasonMatch ? Number(seasonMatch[1]) : null;
-        const episodeKey = heading || normalizeText(video.getAttribute('src') || '');
+        const mediaId = seriesMatch ? seriesMatch[1].toLowerCase() : '';
+        const parsedSeasonNumber = seasonMatch ? Number(seasonMatch[1]) : null;
+        const isSeries = Boolean(mediaId && Number.isInteger(parsedSeasonNumber));
+        const seriesId = isSeries ? mediaId : '';
+        const seasonNumber = isSeries ? parsedSeasonNumber : null;
+        const mediaSource = normalizeText(video.currentSrc || video.getAttribute('src') || '');
+        const episodeKey = heading || mediaId || mediaSource;
 
-        if (!seriesId || !Number.isInteger(seasonNumber)) {
+        if (!episodeKey) {
             return null;
         }
 
         return {
             seriesId,
             seasonNumber,
-            mediaKey: `${seriesId}|${seasonNumber}`,
+            mediaKey: isSeries ? `${seriesId}|${seasonNumber}` : `media|${mediaId || mediaSource}`,
             episodeKey
         };
     }
@@ -141,7 +146,8 @@
             seriesId: state.seriesId,
             seasonNumber: state.seasonNumber,
             trackKey: state.currentTrack.key,
-            trackLabel: state.currentTrack.label
+            trackLabel: state.currentTrack.label,
+            lockable: isSeasonLockable()
         };
     }
 
@@ -209,7 +215,12 @@
     }
 
     function isLocked() {
-        return profileMatchesContext(state.profile, getProfileContext());
+        const context = getProfileContext();
+        return Boolean(context?.lockable && profileMatchesContext(state.profile, context));
+    }
+
+    function isSeasonLockable() {
+        return Boolean(state.seriesId && Number.isInteger(state.seasonNumber));
     }
 
     function profileUrl(apiClient, context) {
@@ -223,7 +234,7 @@
 
     function loadProfile() {
         const context = getProfileContext();
-        if (!context) {
+        if (!context || !context.lockable) {
             return;
         }
 
@@ -330,8 +341,8 @@
 
     function setLockedProfile() {
         const context = getProfileContext();
-        if (!context) {
-            setDialogStatus('The current series and season could not be identified.', true);
+        if (!context || !context.lockable) {
+            setDialogStatus('Season locks are only available for series episodes.', true);
             return;
         }
 
@@ -355,7 +366,7 @@
 
     function unlockProfile() {
         const context = getProfileContext();
-        if (!context) {
+        if (!context || !context.lockable) {
             return;
         }
 
@@ -1321,13 +1332,18 @@
         }
         state.dialog.value.textContent = formatDelay(delay);
         state.dialog.track.textContent = state.currentTrack?.label || 'Selected audio track';
-        state.dialog.season.textContent = state.seasonNumber === null
-            ? 'Current season'
-            : `Season ${state.seasonNumber}`;
+        const lockable = isSeasonLockable();
+        state.dialog.season.textContent = lockable
+            ? `Season ${state.seasonNumber}`
+            : 'Current film';
+        state.dialog.lock.disabled = !lockable;
+        state.dialog.lock.setAttribute('aria-disabled', String(!lockable));
         const locked = isLocked();
         const label = state.dialog.lock.querySelector('.audio-delay-lock-label');
         if (label) {
-            label.textContent = locked ? 'Unlock for this season' : 'Lock for this season';
+            label.textContent = !lockable
+                ? 'Season lock unavailable'
+                : locked ? 'Unlock for this season' : 'Lock for this season';
         }
         const icon = state.dialog.lock.querySelector('.material-icons');
         if (icon) {
