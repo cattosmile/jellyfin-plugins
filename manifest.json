@@ -44,6 +44,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "0.1.11.0",
+                "changelog": "Handles the empty 204 response returned when a season lock is removed.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.11.0.zip",
+                "checksum": "3c02c4b7ebe95352602cf9e45ac7535b",
+                "timestamp": "2026-08-10T00:58:24Z"
+            },
+            {
                 "version": "0.1.10.0",
                 "changelog": "Keeps negative values editable in Firefox and normalizes the numeric field on change.",
                 "targetAbi": "10.11.0.0",

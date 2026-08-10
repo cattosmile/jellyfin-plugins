@@ -1,12 +1,12 @@
 {
     "category": "General",
-    "changelog": "Keeps negative values editable in Firefox and normalizes the numeric field on change.",
+    "changelog": "Handles the empty 204 response returned when a season lock is removed.",
     "description": "Adjusts audio timing in the Jellyfin web player and can lock a per-track delay for an entire series season.",
     "guid": "5b4b4e4f-8f76-4a5b-9e80-2d3c3d0fcb18",
     "name": "Audio Delay",
     "overview": "Fix audio that is ahead of or behind the picture.",
     "owner": "cattosmile",
     "targetAbi": "10.11.0.0",
-    "timestamp": "2026-08-10T00:00:00Z",
-    "version": "0.1.10.0"
+    "timestamp": "2026-08-10T00:58:24Z",
+    "version": "0.1.11.0"
 }

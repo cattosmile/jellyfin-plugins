@@ -44,7 +44,7 @@
     };
 
     window.__JellyfinAudioDelay = {
-        version: '0.1.10.0',
+        version: '0.1.11.0',
         getState: function () {
             return {
                 seriesId: state.seriesId,
@@ -286,8 +286,7 @@
 
         return apiClient.ajax({
             type: 'DELETE',
-            url: profileUrl(apiClient, context),
-            dataType: 'json'
+            url: profileUrl(apiClient, context)
         });
     }
 
