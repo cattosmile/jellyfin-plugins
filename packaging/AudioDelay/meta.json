@@ -1,12 +1,12 @@
 {
     "category": "General",
-    "changelog": "Uses Jellyfin dialog controls and a compact layout for the Audio Delay editor.",
+    "changelog": "Prevents failed delay routing from muting the Jellyfin player and restores reliable mute controls.",
     "description": "Adjusts audio timing in the Jellyfin web player and can lock a per-track delay for an entire series season.",
     "guid": "5b4b4e4f-8f76-4a5b-9e80-2d3c3d0fcb18",
     "name": "Audio Delay",
     "overview": "Fix audio that is ahead of or behind the picture.",
     "owner": "cattosmile",
     "targetAbi": "10.11.0.0",
-    "timestamp": "2026-08-09T22:30:58Z",
-    "version": "0.1.7.0"
+    "timestamp": "2026-08-09T23:35:27Z",
+    "version": "0.1.8.0"
 }

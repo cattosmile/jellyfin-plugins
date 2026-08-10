@@ -17,11 +17,14 @@
         videoObserver: null,
         videoListeners: [],
         graph: null,
+        graphPending: null,
+        graphRequestToken: 0,
         secondaryAudio: null,
         secondarySource: '',
         secondaryTimer: null,
+        secondaryPending: false,
+        secondaryStarting: false,
         customAudio: false,
-        savedMuted: false,
         playerMuted: false,
         seriesId: '',
         seasonNumber: null,
@@ -41,7 +44,7 @@
     };
 
     window.__JellyfinAudioDelay = {
-        version: '0.1.7.0',
+        version: '0.1.8.0',
         getState: function () {
             return {
                 seriesId: state.seriesId,
@@ -50,7 +53,12 @@
                 delayMs: state.delayMs,
                 locked: isLocked(),
                 audioGraphActive: Boolean(state.graph),
-                secondaryAudioActive: Boolean(state.secondaryAudio)
+                audioGraphPending: Boolean(state.graphPending),
+                audioGraphState: state.graph?.context?.state || '',
+                audioGraphBypass: Boolean(state.graph?.bypass),
+                secondaryAudioActive: state.customAudio,
+                secondaryAudioPending: state.secondaryPending,
+                videoMuted: Boolean(state.video?.muted)
             };
         }
     };
@@ -296,6 +304,7 @@
 
     function setDelay(value) {
         state.delayMs = clampDelay(value);
+        setDialogStatus('', false);
         applyDelayToPlayer();
         updateMenuItem();
         renderDialog();
@@ -351,69 +360,210 @@
         }
     }
 
-    function ensureAudioGraph() {
-        if (!state.video) {
-            return null;
+    function closeAudioGraph() {
+        state.graphRequestToken += 1;
+        if (state.graphPending) {
+            state.graphPending.context.close().catch(function () {
+                // The pending context may already have closed itself.
+            });
+            state.graphPending = null;
         }
 
-        if (state.graph && state.graph.video === state.video) {
-            return state.graph;
-        }
-
-        if (state.graph) {
-            try {
-                state.graph.source.disconnect();
-                state.graph.delay.disconnect();
-                state.graph.context.close();
-            } catch (error) {
-                // The old graph is no longer connected to the active player.
-            }
-            state.graph = null;
-        }
-
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) {
-            return null;
+        if (!state.graph) {
+            return;
         }
 
         try {
-            const context = new AudioContextClass();
-            const source = context.createMediaElementSource(state.video);
-            const delay = context.createDelay(MAX_DELAY_SECONDS);
-            source.connect(delay);
-            delay.connect(context.destination);
-            state.graph = { video: state.video, context, source, delay };
-            return state.graph;
+            state.graph.source.disconnect();
         } catch (error) {
-            state.graph = null;
-            return null;
+            // The source may already be disconnected while the video is removed.
         }
-    }
-
-    function resumeAudioGraph(graph) {
-        if (!graph || !graph.context || typeof graph.context.resume !== 'function') {
-            return;
+        try {
+            state.graph.delay?.disconnect();
+        } catch (error) {
+            // A bypass graph has no active delay connection.
         }
-
-        graph.context.resume().catch(function () {
-            setDialogStatus('The browser did not allow the audio graph to start yet.', true);
+        state.graph.context.close().catch(function () {
+            // The context may already have closed with the player.
         });
+        state.graph = null;
     }
 
-    function setGraphDelay(delayMilliseconds) {
-        const graph = ensureAudioGraph();
-        if (!graph) {
-            setDialogStatus('This browser cannot apply an audio delay to the player.', true);
-            return;
+    function applyGraphDelay(graph, delayMilliseconds) {
+        if (!graph?.delay || graph.bypass) {
+            return false;
         }
 
         const seconds = Math.max(0, delayMilliseconds) / 1000;
         graph.delay.delayTime.setTargetAtTime(seconds, graph.context.currentTime, 0.015);
-        resumeAudioGraph(graph);
+        return true;
+    }
+
+    function failAudioGraphStart(context, video, source, delay, message) {
+        state.graphPending = null;
+
+        let bypass = false;
+        if (source) {
+            try {
+                source.connect(context.destination);
+                bypass = true;
+            } catch (error) {
+                // Keep the context alive if the browser already claimed the media element.
+            }
+        }
+
+        if (bypass) {
+            try {
+                if (delay) {
+                    source.disconnect(delay);
+                    delay.disconnect();
+                }
+            } catch (error) {
+                // The failed delay path may never have completed its connection.
+            }
+            state.graph = { video, context, source, delay: null, bypass: true };
+        } else if (!source) {
+            context.close().catch(function () {});
+        }
+
+        if (state.delayMs > 0) {
+            state.delayMs = 0;
+            updateMenuItem();
+            renderDialog();
+        }
+        setDialogStatus(message, true);
+    }
+
+    function resumeAudioGraph(graph) {
+        if (!graph || graph.context.state === 'running' || typeof graph.context.resume !== 'function') {
+            return;
+        }
+
+        graph.context.resume().catch(function () {
+            setDialogStatus('Firefox paused the audio processor. Press Play once to resume it.', true);
+        });
+    }
+
+    function startAudioGraph() {
+        const video = state.video;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!video || !AudioContextClass) {
+            setDialogStatus('This browser cannot apply an audio delay to the player.', true);
+            return false;
+        }
+
+        if (state.graphPending?.video === video) {
+            return true;
+        }
+
+        let context = null;
+        try {
+            context = new AudioContextClass();
+        } catch (error) {
+            setDialogStatus('Firefox could not create the audio processor. The original audio remains active.', true);
+            return false;
+        }
+
+        const requestToken = ++state.graphRequestToken;
+        state.graphPending = { video, context, requestToken };
+        let timeoutId = null;
+        const timeout = new Promise(function (_, reject) {
+            timeoutId = window.setTimeout(function () {
+                reject(new Error('AudioContext resume timed out.'));
+            }, 1000);
+        });
+        let resume = null;
+        try {
+            resume = context.state === 'running'
+                ? Promise.resolve()
+                : Promise.resolve(context.resume());
+        } catch (error) {
+            state.graphPending = null;
+            context.close().catch(function () {});
+            setDialogStatus('Firefox could not start the audio processor. The original audio remains active.', true);
+            return false;
+        }
+
+        Promise.race([resume, timeout]).then(function () {
+            if (requestToken !== state.graphRequestToken || state.video !== video || state.delayMs <= 0) {
+                context.close().catch(function () {});
+                return;
+            }
+            if (context.state !== 'running') {
+                throw new Error('AudioContext did not enter the running state.');
+            }
+
+            let source = null;
+            let delay = null;
+            try {
+                source = context.createMediaElementSource(video);
+
+                // Keep a proven direct path until the delayed path is complete. A
+                // MediaElementSource cannot be detached back to native playback.
+                source.connect(context.destination);
+                delay = context.createDelay(MAX_DELAY_SECONDS);
+                delay.delayTime.setValueAtTime(state.delayMs / 1000, context.currentTime);
+                delay.connect(context.destination);
+                source.connect(delay);
+                source.disconnect(context.destination);
+
+                state.graph = { video, context, source, delay, bypass: false };
+                state.graphPending = null;
+            } catch (error) {
+                failAudioGraphStart(
+                    context,
+                    video,
+                    source,
+                    delay,
+                    'Firefox could not connect the audio processor. The original audio remains active.'
+                );
+            }
+        }).catch(function () {
+            if (requestToken !== state.graphRequestToken) {
+                return;
+            }
+            state.graphPending = null;
+            context.close().catch(function () {});
+            setDialogStatus('Firefox could not start the audio processor. The original audio remains active.', true);
+        }).finally(function () {
+            if (timeoutId !== null) {
+                window.clearTimeout(timeoutId);
+            }
+        });
+        return true;
+    }
+
+    function setGraphDelay(delayMilliseconds) {
+        if (delayMilliseconds <= 0 && state.graphPending) {
+            state.graphRequestToken += 1;
+            state.graphPending.context.close().catch(function () {});
+            state.graphPending = null;
+        }
+
+        if (state.graph && state.graph.video === state.video) {
+            if (!applyGraphDelay(state.graph, delayMilliseconds)) {
+                setDialogStatus('The audio processor is in safe bypass mode. The original audio remains active.', true);
+                return false;
+            }
+            resumeAudioGraph(state.graph);
+            return true;
+        }
+
+        if (delayMilliseconds <= 0) {
+            return true;
+        }
+
+        return startAudioGraph();
     }
 
     function ensureSecondaryAudio() {
         if (!state.video || !state.video.currentSrc || !document.body) {
+            return null;
+        }
+
+        const source = state.video.currentSrc;
+        if (/^blob:/i.test(source)) {
+            setDialogStatus('Negative delay is unavailable for this Jellyfin playback mode. The original audio was left unchanged.', true);
             return null;
         }
 
@@ -423,14 +573,15 @@
             audio.preload = 'auto';
             audio.setAttribute('aria-hidden', 'true');
             audio.style.display = 'none';
-            audio.addEventListener('loadedmetadata', function () {
-                syncSecondaryAudio(true);
+            audio.addEventListener('loadedmetadata', activateSecondaryAudio);
+            audio.addEventListener('canplay', activateSecondaryAudio);
+            audio.addEventListener('error', function () {
+                failSecondaryAudio('The separate audio stream failed. The original audio was restored.');
             });
             document.body.appendChild(audio);
             state.secondaryAudio = audio;
         }
 
-        const source = state.video.currentSrc;
         if (state.secondarySource !== source) {
             state.secondaryAudio.pause();
             state.secondaryAudio.src = source;
@@ -443,33 +594,131 @@
 
     function enterSecondaryAudio() {
         if (!state.video) {
-            return;
+            return false;
         }
 
-        if (!state.customAudio) {
-            state.savedMuted = state.video.muted;
-            state.playerMuted = state.video.muted;
-            state.customAudio = true;
+        if (state.customAudio) {
+            syncSecondaryAudio(true);
+            return true;
         }
 
-        state.video.muted = true;
-        ensureSecondaryAudio();
-        syncSecondaryAudio(true);
+        if (state.secondaryPending) {
+            activateSecondaryAudio();
+            return true;
+        }
+
+        const audio = ensureSecondaryAudio();
+        if (!audio) {
+            return false;
+        }
+
+        state.playerMuted = state.video.muted;
+        state.secondaryPending = true;
+        audio.volume = state.video.volume;
+        audio.muted = true;
+        audio.playbackRate = state.video.playbackRate;
+        if (audio.readyState >= 1) {
+            activateSecondaryAudio();
+        }
+        return true;
     }
 
     function exitSecondaryAudio() {
-        if (state.secondaryAudio) {
-            state.secondaryAudio.pause();
-            state.secondaryAudio.remove();
-            state.secondaryAudio = null;
-            state.secondarySource = '';
+        const restoreVideoMute = state.customAudio;
+        state.customAudio = false;
+        state.secondaryPending = false;
+        state.secondaryStarting = false;
+
+        const audio = state.secondaryAudio;
+        state.secondaryAudio = null;
+        state.secondarySource = '';
+        if (audio) {
+            audio.pause();
+            audio.remove();
         }
 
-        if (state.customAudio && state.video) {
+        if (restoreVideoMute && state.video) {
             state.video.muted = state.playerMuted;
         }
+    }
 
-        state.customAudio = false;
+    function failSecondaryAudio(message) {
+        const hadSecondaryAudio = state.customAudio || state.secondaryPending;
+        exitSecondaryAudio();
+        if (hadSecondaryAudio && state.delayMs < 0) {
+            state.delayMs = 0;
+            updateMenuItem();
+            renderDialog();
+        }
+        setDialogStatus(message, true);
+    }
+
+    function getSecondaryTargetTime(video, audio) {
+        const targetTime = video.currentTime - (state.delayMs / 1000);
+        if (!Number.isFinite(targetTime) || targetTime < 0) {
+            return null;
+        }
+
+        return Number.isFinite(audio.duration) && audio.duration > 0
+            ? Math.min(targetTime, Math.max(0, audio.duration - 0.05))
+            : targetTime;
+    }
+
+    function activateSecondaryAudio() {
+        const video = state.video;
+        const audio = state.secondaryAudio;
+        if (!video || !audio || !state.secondaryPending || state.secondaryStarting || state.delayMs >= 0) {
+            return;
+        }
+        if (video.paused || video.ended || audio.readyState < 1) {
+            return;
+        }
+
+        const targetTime = getSecondaryTargetTime(video, audio);
+        if (targetTime === null) {
+            return;
+        }
+
+        state.secondaryStarting = true;
+        try {
+            audio.currentTime = Math.max(0, targetTime);
+        } catch (error) {
+            state.secondaryStarting = false;
+            failSecondaryAudio('The separate audio stream could not be synchronized. The original audio was restored.');
+            return;
+        }
+
+        audio.play().then(function () {
+            if (state.secondaryAudio !== audio || state.video !== video || state.delayMs >= 0) {
+                audio.pause();
+                return;
+            }
+
+            state.secondaryPending = false;
+            state.secondaryStarting = false;
+            state.customAudio = true;
+            video.muted = true;
+            audio.muted = state.playerMuted;
+            updateCustomMuteButtons();
+        }).catch(function () {
+            state.secondaryStarting = false;
+            failSecondaryAudio('The separate audio stream could not start. The original audio was restored.');
+        });
+    }
+
+    function updateCustomMuteButtons(button) {
+        const buttons = button
+            ? [button]
+            : Array.from(document.querySelectorAll('.buttonMute'));
+        buttons.forEach(function (muteButton) {
+            const icon = muteButton.querySelector('.material-icons');
+            const label = state.playerMuted ? 'Unmute' : 'Mute';
+            muteButton.setAttribute('aria-label', label);
+            muteButton.setAttribute('title', label);
+            if (icon) {
+                icon.textContent = state.playerMuted ? 'volume_off' : 'volume_up';
+            }
+        });
     }
 
     function syncSecondaryAudio(force) {
@@ -480,7 +729,7 @@
         }
 
         if (state.secondarySource !== video.currentSrc) {
-            ensureSecondaryAudio();
+            failSecondaryAudio('The playback source changed. The original audio was restored.');
             return;
         }
 
@@ -493,15 +742,12 @@
             return;
         }
 
-        const targetTime = video.currentTime - (state.delayMs / 1000);
-        if (!Number.isFinite(targetTime) || targetTime < 0) {
+        const boundedTarget = getSecondaryTargetTime(video, audio);
+        if (boundedTarget === null) {
             audio.pause();
             return;
         }
 
-        const boundedTarget = Number.isFinite(audio.duration) && audio.duration > 0
-            ? Math.min(targetTime, Math.max(0, audio.duration - 0.05))
-            : targetTime;
         if (force || Math.abs(audio.currentTime - boundedTarget) > 0.3) {
             try {
                 audio.currentTime = Math.max(0, boundedTarget);
@@ -511,8 +757,9 @@
         }
 
         audio.play().catch(function () {
-            setDialogStatus('The browser blocked the separate audio track. Press Play once to enable it.', true);
+            failSecondaryAudio('The separate audio stream stopped. The original audio was restored.');
         });
+        updateCustomMuteButtons();
     }
 
     function applyDelayToPlayer() {
@@ -522,24 +769,30 @@
         }
 
         if (state.delayMs < 0) {
-            if (state.graph) {
-                setGraphDelay(0);
+            setGraphDelay(0);
+            if (!enterSecondaryAudio()) {
+                state.delayMs = 0;
             }
-            enterSecondaryAudio();
             return;
         }
 
         exitSecondaryAudio();
         if (state.delayMs > 0) {
-            setGraphDelay(state.delayMs);
+            if (!setGraphDelay(state.delayMs)) {
+                state.delayMs = 0;
+            }
         } else if (state.graph) {
             setGraphDelay(0);
         }
     }
 
     function onVideoEvent(event) {
-        if (event.type === 'volumechange' && state.customAudio && state.video) {
-            state.video.muted = true;
+        if (event.type === 'volumechange' && state.customAudio && state.video && state.secondaryAudio) {
+            state.secondaryAudio.volume = state.video.volume;
+            state.secondaryAudio.muted = state.playerMuted;
+            if (!state.video.muted) {
+                state.video.muted = true;
+            }
         }
 
         if (event.type === 'play' || event.type === 'canplay' || event.type === 'loadedmetadata') {
@@ -551,7 +804,9 @@
             }
         }
 
-        if (state.customAudio) {
+        if (state.secondaryPending) {
+            activateSecondaryAudio();
+        } else if (state.customAudio) {
             syncSecondaryAudio(event.type === 'seeking' || event.type === 'emptied' || event.type === 'loadstart');
         }
     }
@@ -567,6 +822,7 @@
         }
 
         exitSecondaryAudio();
+        closeAudioGraph();
         state.video = null;
         state.currentTrack = null;
         state.profile = null;
@@ -979,14 +1235,14 @@
             return;
         }
 
-        if (target.closest('.buttonMute')) {
-            window.setTimeout(function () {
-                if (state.customAudio && state.video) {
-                    state.playerMuted = state.video.muted;
-                    state.video.muted = true;
-                    syncSecondaryAudio(true);
-                }
-            }, 0);
+        const muteButton = target.closest('.buttonMute');
+        if (muteButton && state.customAudio && state.secondaryAudio) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            state.playerMuted = !state.playerMuted;
+            state.secondaryAudio.muted = state.playerMuted;
+            updateCustomMuteButtons(muteButton);
+            return;
         }
 
         const trackButton = target.closest('.actionSheet.opened button.actionSheetMenuItem');
@@ -1350,7 +1606,9 @@
             scheduleSettingsSheetFit(sheet);
         });
         state.secondaryTimer = window.setInterval(function () {
-            if (state.customAudio) {
+            if (state.secondaryPending) {
+                activateSecondaryAudio();
+            } else if (state.customAudio) {
                 syncSecondaryAudio(false);
             }
         }, 100);
