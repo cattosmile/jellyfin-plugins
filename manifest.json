@@ -44,6 +44,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "0.1.10.0",
+                "changelog": "Keeps negative values editable in Firefox and normalizes the numeric field on change.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.10.0.zip",
+                "checksum": "c62697a88d617c8aac1a7645654f8c34",
+                "timestamp": "2026-08-10T00:48:28Z"
+            },
+            {
                 "version": "0.1.9.0",
                 "changelog": "Reworks the Audio Delay editor to use Jellyfin's native dialog layout and controls.",
                 "targetAbi": "10.11.0.0",

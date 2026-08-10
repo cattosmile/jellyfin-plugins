@@ -44,7 +44,7 @@
     };
 
     window.__JellyfinAudioDelay = {
-        version: '0.1.9.0',
+        version: '0.1.10.0',
         getState: function () {
             return {
                 seriesId: state.seriesId,
@@ -308,6 +308,25 @@
         applyDelayToPlayer();
         updateMenuItem();
         renderDialog();
+    }
+
+    function setDelayFromNumberInput(value) {
+        const rawValue = String(value ?? '').trim();
+        if (!rawValue || rawValue === '-' || rawValue === '+') {
+            return;
+        }
+
+        const numericValue = Number(rawValue);
+        if (!Number.isFinite(numericValue)) {
+            return;
+        }
+
+        const requestedDelay = clampDelay(numericValue);
+        state.delayMs = requestedDelay;
+        setDialogStatus('', false);
+        applyDelayToPlayer();
+        updateMenuItem();
+        renderDialog(state.delayMs === requestedDelay);
     }
 
     function setLockedProfile() {
@@ -1291,14 +1310,16 @@
         state.dialog.status.classList.toggle('audio-delay-status-error', Boolean(error));
     }
 
-    function renderDialog() {
+    function renderDialog(preserveNumberValue) {
         if (!state.dialog) {
             return;
         }
 
         const delay = state.delayMs;
         state.dialog.range.value = String(delay);
-        state.dialog.number.value = String(delay);
+        if (!preserveNumberValue) {
+            state.dialog.number.value = String(delay);
+        }
         state.dialog.value.textContent = formatDelay(delay);
         state.dialog.track.textContent = state.currentTrack?.label || 'Selected audio track';
         state.dialog.season.textContent = state.seasonNumber === null
@@ -1431,6 +1452,9 @@
             setDelay(state.dialog.range.value);
         });
         state.dialog.number.addEventListener('input', function () {
+            setDelayFromNumberInput(state.dialog.number.value);
+        });
+        state.dialog.number.addEventListener('change', function () {
             setDelay(state.dialog.number.value);
         });
         overlay.addEventListener('click', function (event) {
