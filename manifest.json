@@ -44,6 +44,14 @@
         "category": "General",
         "versions": [
             {
+                "version": "0.1.9.0",
+                "changelog": "Reworks the Audio Delay editor to use Jellyfin's native dialog layout and controls.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://raw.githubusercontent.com/cattosmile/jellyfin-plugins/main/releases/AudioDelay_0.1.9.0.zip",
+                "checksum": "37779e5afa106207081d3a8430df74ed",
+                "timestamp": "2026-08-10T00:21:45Z"
+            },
+            {
                 "version": "0.1.8.0",
                 "changelog": "Prevents failed delay routing from muting the Jellyfin player and restores reliable mute controls.",
                 "targetAbi": "10.11.0.0",
